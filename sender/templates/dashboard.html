@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Nora Shop{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_sub %}Visão geral do bot em tempo real{% endblock %}
+
+{% block header_actions %}
+<button class="btn btn-primary btn-sm" onclick="location.href='/ofertas/nova'">+ Nova Oferta</button>
+<button class="btn btn-ghost btn-sm" onclick="refreshDash()">↻ Atualizar</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- MÉTRICAS -->
+<div class="metrics" style="margin-bottom:14px">
+  <div class="metric-card c-green" style="animation-delay:.0s">
+    <div class="metric-icon">📤</div>
+    <div class="metric-label">Enviadas hoje</div>
+    <div class="metric-value" id="m-hoje">{{ stats.enviadas_hoje }}</div>
+    <div class="metric-sub">↑ {{ stats.enviadas_semana }} esta semana</div>
+  </div>
+  <div class="metric-card c-purple" style="animation-delay:.08s">
+    <div class="metric-icon">🔥</div>
+    <div class="metric-label">Ofertas coletadas</div>
+    <div class="metric-value">{{ stats.total_ofertas }}</div>
+    <div class="metric-sub">{{ stats.total_keywords }} keywords ativas</div>
+  </div>
+  <div class="metric-card c-pink" style="animation-delay:.16s">
+    <div class="metric-icon">💬</div>
+    <div class="metric-label">Grupos WhatsApp</div>
+    <div class="metric-value">{{ stats.grupos_ativos }}</div>
+    <div class="metric-sub">{{ stats.total_grupos }} cadastrados</div>
+  </div>
+  <div class="metric-card c-amber" style="animation-delay:.24s">
+    <div class="metric-icon">🎟️</div>
+    <div class="metric-label">Cupons ativos</div>
+    <div class="metric-value">{{ stats.cupons_ativos }}</div>
+    <div class="metric-sub">{{ stats.cupons_expirando }} expirando em breve</div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-bottom:14px">
+
+  <!-- GRÁFICO CSS -->
+  <div class="card">
+    <div class="card-title">📈 Envios — últimos 7 dias</div>
+    <div class="bar-chart" id="chart">
+      {% for d in chart_data %}
+      <div class="bar-row">
+        <span class="bar-label">{{ d.dia }}</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:{{ d.pct }}%"></div>
+        </div>
+        <span class="bar-val">{{ d.total }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ATIVIDADE RECENTE -->
+  <div class="card">
+    <div class="card-title">🕐 Atividade recente</div>
+    <div class="timeline">
+      {% for a in atividade %}
+      <div class="tl-item">
+        <div class="tl-dot">{{ a.icon }}</div>
+        <div class="tl-body">
+          <div class="tl-title">{{ a.titulo }}</div>
+          <div class="tl-time">{{ a.loja }} · {{ a.tempo }}</div>
+        </div>
+      </div>
+      {% else %}
+      <div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0">
+        Nenhuma atividade ainda
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- QUICK ACTIONS + STATUS LOJAS -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">⚡ Ações rápidas</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <a href="/ofertas/nova" class="btn btn-primary">🔥 Cadastrar oferta manual</a>
+      <a href="/cupons/novo" class="btn btn-ghost">🎟️ Adicionar cupom</a>
+      <a href="/keywords/nova" class="btn btn-ghost">🔍 Nova keyword</a>
+      <button class="btn btn-ghost" onclick="rodarBot()">▶️ Rodar scraping agora</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🛒 Status das lojas</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      {% for loja in lojas_status %}
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span>{{ loja.icon }}</span>
+          <span style="font-size:13px;font-weight:500">{{ loja.nome }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge {{ loja.badge }}">{{ loja.status }}</span>
+          <span style="font-size:12px;color:var(--text3)">{{ loja.ultima }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function refreshDash() {
+  const r = await api('/api/stats', {}, 'GET');
+  if (r) {
+    document.getElementById('m-hoje').textContent = r.enviadas_hoje;
+    toast('Dashboard atualizado');
+  }
+}
+
+async function rodarBot() {
+  toast('Iniciando scraping...');
+  const r = await api('/api/rodar-bot');
+  if (r?.ok) toast('Scraping concluído: ' + r.encontradas + ' ofertas');
+  else toast('Erro ao rodar bot', false);
+}
+
+startAutoRefresh(refreshDash, 30000);
+</script>
+{% endblock %}

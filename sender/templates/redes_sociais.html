@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Redes Sociais — Nora Shop{% endblock %}
+{% block page_title %}Redes Sociais{% endblock %}
+{% block page_sub %}Status e configuração dos canais de envio{% endblock %}
+
+{% block content %}
+<div class="grid-2" style="margin-bottom:14px">
+
+  <!-- WHATSAPP -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <span style="font-size:28px">💬</span>
+      <div>
+        <div style="font-size:16px;font-weight:700">WhatsApp</div>
+        <div style="font-size:12px;color:var(--text3)">via whatsapp-web.js</div>
+      </div>
+      <span class="badge {% if status.whatsapp %}badge-green{% else %}badge-red{% endif %}" style="margin-left:auto">
+        {% if status.whatsapp %}Online{% else %}Offline{% endif %}
+      </span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--text3)">Número</span>
+        <span>{{ status.wa_numero or '—' }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--text3)">Grupos ativos</span>
+        <span>{{ status.grupos_ativos }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--text3)">Enviados hoje</span>
+        <span>{{ status.wa_enviados_hoje }}</span>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn btn-green btn-sm" onclick="testarWA()">Enviar teste</button>
+      <a href="/grupos" class="btn btn-ghost btn-sm">Ver grupos</a>
+    </div>
+  </div>
+
+  <!-- INSTAGRAM -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <span style="font-size:28px">📸</span>
+      <div>
+        <div style="font-size:16px;font-weight:700">Instagram</div>
+        <div style="font-size:12px;color:var(--text3)">via Graph API</div>
+      </div>
+      <span class="badge {% if status.instagram %}badge-green{% else %}badge-gray{% endif %}" style="margin-left:auto">
+        {% if status.instagram %}Conectado{% else %}Não configurado{% endif %}
+      </span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--text3)">Perfil</span>
+        <span>{{ status.ig_username or '—' }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--text3)">Token</span>
+        <span class="badge {% if status.ig_token_ok %}badge-green{% else %}badge-red{% endif %}">
+          {% if status.ig_token_ok %}Válido{% else %}Inválido{% endif %}
+        </span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--text3)">Posts hoje</span>
+        <span>{{ status.ig_posts_hoje }}</span>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="testarIG()">Testar post</button>
+      <a href="/configuracoes" class="btn btn-ghost btn-sm">Configurar token</a>
+    </div>
+  </div>
+</div>
+
+<!-- ÚLTIMAS ATIVIDADES -->
+<div class="card">
+  <div class="card-title">📊 Últimos envios por canal</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Canal</th><th>Destino</th><th>Oferta</th><th>Status</th><th>Horário</th></tr></thead>
+      <tbody>
+        {% for e in ultimos_envios %}
+        <tr>
+          <td>{{ '💬' if e.canal=='whatsapp' else '📸' }} {{ e.canal }}</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.destino or '—' }}</td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">{{ e.titulo }}</td>
+          <td><span class="badge {% if e.status=='enviado' %}badge-green{% else %}badge-red{% endif %}">{{ e.status }}</span></td>
+          <td style="white-space:nowrap">{{ e.enviado_em }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">Nenhum envio ainda</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function testarWA()  { const r=await api('/api/teste-whatsapp');  r?.ok?toast('Teste WA enviado!'):toast(r?.erro,false); }
+async function testarIG()  { const r=await api('/api/teste-instagram'); r?.ok?toast('Teste IG enviado!'):toast(r?.erro,false); }
+</script>
+{% endblock %}

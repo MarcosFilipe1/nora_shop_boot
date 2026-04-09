@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Nora Shop — Painel{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🛍️</div>
+    <div>
+      <div class="logo-text">Nora Shop</div>
+      <div class="logo-sub">Bot de Ofertas</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">Principal</div>
+    <a href="/" class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}">
+      <span class="nav-icon">📊</span> Dashboard
+    </a>
+    <a href="/ofertas" class="nav-link {% if request.endpoint=='ofertas' %}active{% endif %}">
+      <span class="nav-icon">🔥</span> Ofertas
+    </a>
+    <a href="/cupons" class="nav-link {% if request.endpoint=='cupons' %}active{% endif %}">
+      <span class="nav-icon">🎟️</span> Cupons
+    </a>
+
+    <div class="nav-section">Monitoramento</div>
+    <a href="/keywords" class="nav-link {% if request.endpoint=='keywords' %}active{% endif %}">
+      <span class="nav-icon">🔍</span> Keywords
+    </a>
+    <a href="/produtos" class="nav-link {% if request.endpoint=='produtos' %}active{% endif %}">
+      <span class="nav-icon">📦</span> Produtos Fixos
+    </a>
+
+    <div class="nav-section">Canais</div>
+    <a href="/grupos" class="nav-link {% if request.endpoint=='grupos' %}active{% endif %}">
+      <span class="nav-icon">💬</span> Grupos WhatsApp
+    </a>
+    <a href="/redes-sociais" class="nav-link {% if request.endpoint=='redes_sociais' %}active{% endif %}">
+      <span class="nav-icon">📱</span> Redes Sociais
+    </a>
+
+    <div class="nav-section">Sistema</div>
+    <a href="/logs" class="nav-link {% if request.endpoint=='logs' %}active{% endif %}">
+      <span class="nav-icon">📋</span> Logs
+    </a>
+    <a href="/configuracoes" class="nav-link {% if request.endpoint=='configuracoes' %}active{% endif %}">
+      <span class="nav-icon">⚙️</span> Configurações
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="status-pill">
+      <div class="dot {% if status.whatsapp %}dot-green{% else %}dot-gray{% endif %}"></div>
+      WhatsApp {% if status.whatsapp %}online{% else %}offline{% endif %}
+    </div>
+    <div class="status-pill">
+      <div class="dot {% if status.instagram %}dot-green{% else %}dot-gray{% endif %}"></div>
+      Instagram {% if status.instagram %}conectado{% else %}offline{% endif %}
+    </div>
+    <div class="status-pill">
+      <div class="dot dot-green"></div>
+      Bot ativo
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">{% block page_title %}{% endblock %}</div>
+      <div class="page-sub">{% block page_sub %}{% endblock %}</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      {% block header_actions %}{% endblock %}
+    </div>
+  </div>
+  <div class="page-content">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<script>
+function toast(msg, ok=true) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (ok ? 'toast-ok' : 'toast-err');
+  el.innerHTML = (ok ? '✅ ' : '❌ ') + msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+async function api(url, data={}, method='POST') {
+  try {
+    const r = await fetch(url, {
+      method,
+      headers: {'Content-Type': 'application/json'},
+      body: method !== 'GET' ? JSON.stringify(data) : undefined,
+    });
+    return await r.json();
+  } catch(e) {
+    toast('Erro de conexão', false);
+    return null;
+  }
+}
+
+// Auto-refresh suave a cada 30s
+let _refreshTimer;
+function startAutoRefresh(fn, ms=30000) {
+  clearInterval(_refreshTimer);
+  _refreshTimer = setInterval(fn, ms);
+}
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Grupos WhatsApp — Nora Shop{% endblock %}
+{% block page_title %}Grupos WhatsApp{% endblock %}
+{% block page_sub %}Gerencie quais grupos recebem as ofertas{% endblock %}
+
+{% block header_actions %}
+<button class="btn btn-ghost btn-sm" onclick="refreshGrupos()">↻ Atualizar lista</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- STATUS CONEXÃO -->
+<div class="card" style="margin-bottom:14px">
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="font-size:28px">💬</div>
+      <div>
+        <div style="font-size:15px;font-weight:600">WhatsApp Web</div>
+        <div style="font-size:12px;color:var(--text3)" id="wa-status-txt">
+          {% if status.whatsapp %}Conectado como {{ status.wa_numero }}{% else %}Desconectado — inicie o Node.js{% endif %}
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="badge {% if status.whatsapp %}badge-green{% else %}badge-red{% endif %}" id="wa-badge">
+        {% if status.whatsapp %}Online{% else %}Offline{% endif %}
+      </span>
+      <button class="btn btn-ghost btn-sm" onclick="testarWA()">Enviar teste</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESUMO -->
+<div class="metrics" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+  <div class="metric-card c-green">
+    <div class="metric-label">Grupos ativos</div>
+    <div class="metric-value">{{ grupos | selectattr('ativo') | list | length }}</div>
+    <div class="metric-sub">recebendo ofertas</div>
+  </div>
+  <div class="metric-card c-purple">
+    <div class="metric-label">Total de grupos</div>
+    <div class="metric-value">{{ grupos | length }}</div>
+    <div class="metric-sub">encontrados</div>
+  </div>
+  <div class="metric-card c-amber">
+    <div class="metric-label">Participantes</div>
+    <div class="metric-value">{{ grupos | sum(attribute='participantes') }}</div>
+    <div class="metric-sub">em todos os grupos</div>
+  </div>
+</div>
+
+<!-- LISTA DE GRUPOS -->
+<div class="card">
+  <div class="card-title">💬 Todos os grupos</div>
+  {% if not status.whatsapp %}
+  <div style="text-align:center;padding:32px;color:var(--text3)">
+    ⚠️ WhatsApp offline. Inicie o Node.js para ver os grupos.
+  </div>
+  {% else %}
+  <div style="display:flex;flex-direction:column;gap:8px" id="lista-grupos">
+    {% for g in grupos %}
+    <div class="grupo-card">
+      <div class="grupo-avatar">👥</div>
+      <div class="grupo-info">
+        <div class="grupo-nome">{{ g.nome }}</div>
+        <div class="grupo-meta">{{ g.participantes }} participantes · última atividade {{ g.ultima }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="badge {% if g.ativo %}badge-green{% else %}badge-gray{% endif %}">
+          {% if g.ativo %}Ativo{% else %}Pausado{% endif %}
+        </span>
+        <label class="toggle" title="Ativar/desativar envios">
+          <input type="checkbox" {% if g.ativo %}checked{% endif %}
+                 onchange="toggleGrupo('{{ g.group_id }}', this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:24px;color:var(--text3)">
+      Nenhum grupo encontrado. Clique em "Atualizar lista".
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function toggleGrupo(groupId, ativo) {
+  const r = await api('/grupos/toggle', {group_id: groupId, ativo});
+  if (r?.ok) toast(ativo ? 'Grupo ativado' : 'Grupo pausado');
+  else toast('Erro ao atualizar', false);
+}
+async function refreshGrupos() {
+  toast('Atualizando grupos...');
+  const r = await api('/grupos/refresh');
+  if (r?.ok) { toast('Lista atualizada: '+r.total+' grupos'); location.reload(); }
+  else toast('WhatsApp offline', false);
+}
+async function testarWA() {
+  const r = await api('/api/teste-whatsapp');
+  if (r?.ok) toast('Mensagem de teste enviada!');
+  else toast('Erro: '+r?.erro, false);
+}
+startAutoRefresh(() => {
+  fetch('/api/wa-status').then(r=>r.json()).then(d => {
+    document.getElementById('wa-badge').className = 'badge '+(d.online?'badge-green':'badge-red');
+    document.getElementById('wa-badge').textContent = d.online?'Online':'Offline';
+  });
+}, 15000);
+</script>
+{% endblock %}

@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+data/ofertas.db
+data/config.json
+data/wa_status.json
+data/wa_groups.json
+logs/
+node_modules/
+.wwebjs_auth/
+.wwebjs_cache/

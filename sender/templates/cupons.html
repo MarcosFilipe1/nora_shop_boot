@@ -1,0 +1,133 @@
+<!-- ═══════════════════ CUPONS ═══════════════════ -->
+<!-- cupons.html -->
+{% extends "base.html" %}
+{% block title %}Cupons — Nora Shop{% endblock %}
+{% block page_title %}Cupons{% endblock %}
+{% block page_sub %}Gerencie cupons de desconto por loja{% endblock %}
+
+{% block header_actions %}
+<button class="btn btn-primary btn-sm" onclick="toggleForm()">+ Novo Cupom</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- FORM NOVO CUPOM -->
+<div id="form-cupom" class="card" style="margin-bottom:14px;display:none">
+  <div class="card-title">🎟️ Novo cupom</div>
+  <div class="grid-2">
+    <div>
+      <div class="form-group">
+        <label>Loja</label>
+        <select id="c-loja">
+          {% for l in lojas %}<option value="{{l.id}}">{{l.icon}} {{l.nome}}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Código do cupom</label>
+        <input id="c-codigo" placeholder="Ex: FRETE10, DESCONTO20">
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <input id="c-descricao" placeholder="Ex: 20% off em eletrônicos">
+      </div>
+    </div>
+    <div>
+      <div class="form-group">
+        <label>Tipo de desconto</label>
+        <select id="c-tipo">
+          <option value="percentual">Percentual (%)</option>
+          <option value="fixo">Valor fixo (R$)</option>
+          <option value="frete">Frete grátis</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Valor</label>
+        <input id="c-valor" type="number" placeholder="Ex: 20">
+      </div>
+      <div class="form-group">
+        <label>Válido até</label>
+        <input id="c-validade" type="date">
+      </div>
+    </div>
+  </div>
+  <div class="form-group">
+    <label>URL do produto (deixe vazio para cupom geral)</label>
+    <input id="c-url" placeholder="https://...">
+  </div>
+  <div class="form-group">
+    <label>Aplicar automaticamente na URL?</label>
+    <select id="c-aplicar">
+      <option value="0">Não — exibir código na mensagem</option>
+      <option value="1">Sim — embutir na URL (Shopee e Magalu)</option>
+    </select>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:4px">
+    <button class="btn btn-primary" onclick="salvarCupom()">Salvar</button>
+    <button class="btn btn-ghost" onclick="toggleForm()">Cancelar</button>
+  </div>
+</div>
+
+<!-- LISTA DE CUPONS -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+  {% for c in cupons %}
+  <div class="card" style="position:relative">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+      <span class="badge {{ c.badge }}">{{ c.icon }} {{ c.loja }}</span>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="desativarCupom({{ c.id }})" title="Desativar">✕</button>
+      </div>
+    </div>
+    <div style="font-size:20px;font-weight:700;letter-spacing:.05em;color:var(--text);margin-bottom:4px;font-family:monospace">
+      {{ c.codigo }}
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:10px">{{ c.descricao or '—' }}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span class="badge {% if c.expirando %}badge-amber{% elif c.expirado %}badge-red{% else %}badge-green{% endif %}">
+        {% if c.expirado %}Expirado{% elif c.expirando %}Expirando{% else %}Ativo{% endif %}
+      </span>
+      <span style="font-size:12px;color:var(--text3)">
+        {% if c.valido_ate %}até {{ c.valido_ate }}{% else %}Sem validade{% endif %}
+      </span>
+    </div>
+    {% if c.aplicar_no_link %}
+    <div style="margin-top:8px"><span class="badge badge-blue">🔗 Na URL</span></div>
+    {% else %}
+    <div style="margin-top:8px"><span class="badge badge-purple">💬 Na mensagem</span></div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="card" style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3)">
+    Nenhum cupom cadastrado ainda. Clique em "+ Novo Cupom" para começar.
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleForm() {
+  const f = document.getElementById('form-cupom');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+async function salvarCupom() {
+  const r = await api('/api/cupom', {
+    loja: document.getElementById('c-loja').value,
+    codigo: document.getElementById('c-codigo').value,
+    descricao: document.getElementById('c-descricao').value,
+    desconto_tipo: document.getElementById('c-tipo').value,
+    desconto_valor: parseFloat(document.getElementById('c-valor').value)||null,
+    valido_ate: document.getElementById('c-validade').value||null,
+    url_produto: document.getElementById('c-url').value||null,
+    aplicar_no_link: parseInt(document.getElementById('c-aplicar').value),
+  });
+  if (r?.ok) { toast('Cupom salvo!'); location.reload(); }
+  else toast(r?.erro||'Erro', false);
+}
+async function desativarCupom(id) {
+  if (!confirm('Desativar este cupom?')) return;
+  const r = await api('/api/cupom/'+id+'/desativar');
+  if (r?.ok) { toast('Cupom desativado'); location.reload(); }
+  else toast('Erro', false);
+}
+</script>
+{% endblock %}

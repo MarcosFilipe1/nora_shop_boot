@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Logs — Nora Shop{% endblock %}
+{% block page_title %}Logs do Sistema{% endblock %}
+{% block page_sub %}Monitoramento em tempo real{% endblock %}
+
+{% block header_actions %}
+<select id="log-filtro" class="btn btn-ghost btn-sm" style="padding:6px 10px" onchange="filtrarLogs()">
+  <option value="">Todos</option>
+  <option value="INFO">INFO</option>
+  <option value="SUCCESS">SUCCESS</option>
+  <option value="WARNING">WARNING</option>
+  <option value="ERROR">ERROR</option>
+</select>
+<button class="btn btn-ghost btn-sm" onclick="limparTerminal()">Limpar</button>
+{% endblock %}
+
+{% block content %}
+<div class="terminal" id="terminal">
+  {% for log in logs %}
+  <div class="log-line log-{{ log.nivel|lower }}" data-nivel="{{ log.nivel }}">
+    <span class="log-time">{{ log.time }}</span>
+    <span class="{% if log.nivel=='INFO' %}log-info{% elif log.nivel=='SUCCESS' %}log-success{% elif log.nivel=='WARNING' %}log-warn{% elif log.nivel=='ERROR' %}log-error{% endif %}">[{{ log.nivel }}]</span>
+    {{ log.msg }}
+  </div>
+  {% else %}
+  <div class="log-info">Sistema iniciado. Aguardando atividade...</div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filtrarLogs() {
+  const nivel = document.getElementById('log-filtro').value;
+  document.querySelectorAll('.log-line').forEach(l => {
+    l.style.display = (!nivel || l.dataset.nivel===nivel) ? '' : 'none';
+  });
+}
+function limparTerminal() { document.getElementById('terminal').innerHTML = ''; }
+
+// Auto-refresh dos logs
+async function refreshLogs() {
+  const r = await fetch('/api/logs?limit=5');
+  if (!r.ok) return;
+  const data = await r.json();
+  const t = document.getElementById('terminal');
+  data.logs.forEach(log => {
+    const cls = {INFO:'log-info',SUCCESS:'log-success',WARNING:'log-warn',ERROR:'log-error'}[log.nivel]||'';
+    const div = document.createElement('div');
+    div.className = 'log-line log-'+(log.nivel||'').toLowerCase();
+    div.dataset.nivel = log.nivel;
+    div.innerHTML = `<span class="log-time">${log.time}</span><span class="${cls}">[${log.nivel}]</span> ${log.msg}`;
+    t.appendChild(div);
+  });
+  t.scrollTop = t.scrollHeight;
+}
+startAutoRefresh(refreshLogs, 5000);
+</script>
+{% endblock %}

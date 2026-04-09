@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Configurações — Nora Shop{% endblock %}
+{% block page_title %}Configurações{% endblock %}
+{% block page_sub %}Ajuste o comportamento do bot{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <!-- BOT -->
+  <div class="card">
+    <div class="card-title">🤖 Bot</div>
+    <div class="form-group">
+      <label>Intervalo de scraping (minutos)</label>
+      <input type="number" id="cfg-intervalo" value="{{ cfg.intervalo_scraping }}" min="5" max="120">
+    </div>
+    <div class="form-group">
+      <label>Máximo de envios por hora</label>
+      <input type="number" id="cfg-max-hora" value="{{ cfg.max_envios_hora }}" min="1" max="60">
+    </div>
+    <div class="form-group">
+      <label>Desconto mínimo padrão (%)</label>
+      <input type="number" id="cfg-desconto" value="{{ cfg.desconto_minimo }}" min="0" max="100">
+    </div>
+    <div class="form-group">
+      <label>Não reenviar oferta por (horas)</label>
+      <input type="number" id="cfg-cooldown" value="{{ cfg.cooldown_horas }}" min="1" max="72">
+    </div>
+  </div>
+
+  <!-- INSTAGRAM -->
+  <div class="card">
+    <div class="card-title">📸 Instagram</div>
+    <div class="form-group">
+      <label>Page Access Token</label>
+      <input type="password" id="cfg-ig-token" value="{{ cfg.ig_token or '' }}" placeholder="EAAxxxxxxx...">
+    </div>
+    <div class="form-group">
+      <label>Instagram User ID</label>
+      <input id="cfg-ig-id" value="{{ cfg.ig_user_id or '' }}" placeholder="17841xxxxxxxx">
+    </div>
+    <div class="form-group">
+      <label>Postar automaticamente no Instagram?</label>
+      <select id="cfg-ig-auto">
+        <option value="1" {% if cfg.ig_auto %}selected{% endif %}>Sim</option>
+        <option value="0" {% if not cfg.ig_auto %}selected{% endif %}>Não</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- AFILIADOS -->
+  <div class="card">
+    <div class="card-title">🔗 IDs de Afiliado</div>
+    {% for loja in lojas %}
+    <div class="form-group">
+      <label>{{ loja.icon }} {{ loja.nome }}</label>
+      <input id="aff-{{ loja.id }}" value="{{ cfg.afiliados.get(loja.id,'') }}"
+             placeholder="{{ loja.placeholder }}">
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- SISTEMA -->
+  <div class="card">
+    <div class="card-title">⚙️ Sistema</div>
+    <div style="display:flex;flex-direction:column;gap:12px;font-size:13px">
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--text3)">Versão do bot</span><span>1.0.0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--text3)">Banco de dados</span>
+        <span class="badge badge-green">{{ cfg.db_size }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--text3)">Uptime</span><span>{{ cfg.uptime }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--text3)">Python</span><span>{{ cfg.python_version }}</span>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="limparHistorico()">🗑️ Limpar histórico antigo (30d+)</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportarDados()">📤 Exportar dados (JSON)</button>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:14px;display:flex;gap:8px">
+  <button class="btn btn-primary" onclick="salvarConfigs()">💾 Salvar todas as configurações</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function salvarConfigs() {
+  const afiliados = {};
+  {% for loja in lojas %}
+  afiliados['{{ loja.id }}'] = document.getElementById('aff-{{ loja.id }}').value;
+  {% endfor %}
+
+  const r = await api('/configuracoes/salvar', {
+    intervalo_scraping: parseInt(document.getElementById('cfg-intervalo').value),
+    max_envios_hora:    parseInt(document.getElementById('cfg-max-hora').value),
+    desconto_minimo:    parseInt(document.getElementById('cfg-desconto').value),
+    cooldown_horas:     parseInt(document.getElementById('cfg-cooldown').value),
+    ig_token:           document.getElementById('cfg-ig-token').value,
+    ig_user_id:         document.getElementById('cfg-ig-id').value,
+    ig_auto:            parseInt(document.getElementById('cfg-ig-auto').value),
+    afiliados,
+  });
+  r?.ok ? toast('Configurações salvas!') : toast('Erro ao salvar', false);
+}
+async function limparHistorico() {
+  if (!confirm('Limpar registros com mais de 30 dias?')) return;
+  const r = await api('/api/limpar-historico');
+  r?.ok ? toast(r.removidos+' registros removidos') : toast('Erro', false);
+}
+function exportarDados() { window.location='/api/exportar'; }
+</script>
+{% endblock %}
