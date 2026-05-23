@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Keywords — Nora Shop{% endblock %}
+{% block page_title %}Keywords{% endblock %}
+{% block page_sub %}Termos de busca automática por loja{% endblock %}
+{% block header_actions %}
+<button class="btn btn-primary btn-sm" onclick="toggleForm()">+ Nova Keyword</button>
+{% endblock %}
+{% block content %}
+<div id="form-kw" class="card" style="margin-bottom:14px;display:none">
+  <div class="card-title">🔍 Nova keyword</div>
+  <div class="grid-2">
+    <div>
+      <div class="form-group"><label>Termo de busca</label><input id="kw-termo" placeholder="Ex: fone bluetooth"></div>
+      <div class="form-group"><label>Loja</label>
+        <select id="kw-loja">
+          <option value="todas">Todas as lojas</option>
+          {% for l in lojas %}<option value="{{ l.id }}">{{ l.icon }} {{ l.nome }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div>
+      <div class="form-group"><label>Desconto mínimo (%)</label><input id="kw-desc" type="number" value="15"></div>
+      <div class="form-group"><label>Preço máximo (R$)</label><input id="kw-preco" type="number" placeholder="Opcional"></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-primary" onclick="salvarKw()">Salvar</button>
+    <button class="btn btn-ghost" onclick="toggleForm()">Cancelar</button>
+  </div>
+</div>
+<div class="card">
+  <div class="chip-list">
+    {% for k in keywords %}
+    <div class="chip" style="gap:8px;padding:8px 14px">
+      <span>🔍 {{ k.termo }}</span>
+      <span class="badge badge-gray">{{ k.loja }}</span>
+      <span style="color:var(--amber-l)">≥{{ k.desconto_minimo }}%</span>
+      {% if k.preco_maximo %}<span style="color:var(--text3)">≤R${{ k.preco_maximo }}</span>{% endif %}
+      <button onclick="desativarKw({{ k.id }})" style="background:none;border:none;color:var(--text3);cursor:pointer">✕</button>
+    </div>
+    {% else %}
+    <div style="color:var(--text3);padding:20px">Nenhuma keyword. Clique em "+ Nova Keyword".</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function toggleForm() {
+  const f = document.getElementById('form-kw');
+  f.style.display = f.style.display==='none'?'block':'none';
+}
+async function salvarKw() {
+  const r = await api('/api/keyword', {
+    termo: document.getElementById('kw-termo').value,
+    loja:  document.getElementById('kw-loja').value,
+    desconto_minimo: parseInt(document.getElementById('kw-desc').value)||15,
+    preco_maximo: parseFloat(document.getElementById('kw-preco').value)||null,
+  });
+  r?.ok ? (toast('Keyword salva!'), location.reload()) : toast(r?.erro||'Erro', false);
+}
+async function desativarKw(id) {
+  if (!confirm('Remover keyword?')) return;
+  const r = await api('/api/keyword/'+id+'/desativar');
+  r?.ok ? (toast('Removida'), location.reload()) : toast('Erro', false);
+}
+</script>
+{% endblock %}

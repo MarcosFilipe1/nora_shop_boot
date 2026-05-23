@@ -481,3 +481,67 @@ if __name__ == '__main__':
     print("\n🛍️  Nora Shop — Painel iniciado")
     print("   Acesse: http://localhost:5001\n")
     app.run(host='0.0.0.0', port=5001, debug=False)
+
+@app.route('/ofertas')
+def ofertas():
+    _ensure_tables()
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT * FROM historico_precos
+        ORDER BY coletado_em DESC LIMIT 100
+    """).fetchall() if table_exists(conn,'historico_precos') else []
+    conn.close()
+    ofertas = [dict(r) for r in rows]
+    return render_template('ofertas.html', status=get_status(), ofertas=ofertas)
+
+@app.route('/keywords')
+def keywords():
+    _ensure_tables()
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM keywords ORDER BY loja, termo").fetchall() if table_exists(conn,'keywords') else []
+    conn.close()
+    kws = [dict(r) for r in rows]
+    return render_template('keywords.html', status=get_status(), keywords=kws, lojas=LOJAS)
+
+@app.route('/produtos')
+def produtos():
+    _ensure_tables()
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM produtos ORDER BY loja, nome").fetchall() if table_exists(conn,'produtos') else []
+    conn.close()
+    prods = [dict(r) for r in rows]
+    return render_template('produtos.html', status=get_status(), produtos=prods, lojas=LOJAS)
+
+@app.route('/api/keyword', methods=['POST'])
+def api_keyword():
+    try:
+        d = request.get_json()
+        conn = get_conn()
+        conn.execute("""INSERT INTO keywords (termo, loja, desconto_minimo, preco_maximo)
+            VALUES (?,?,?,?)""", (d['termo'], d['loja'], d.get('desconto_minimo',15), d.get('preco_maximo')))
+        conn.commit(); conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'erro': str(e)}), 400
+
+@app.route('/api/keyword/<int:id>/desativar', methods=['POST'])
+def api_keyword_desativar(id):
+    try:
+        conn = get_conn()
+        conn.execute("UPDATE keywords SET ativo=0 WHERE id=?", (id,))
+        conn.commit(); conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'erro': str(e)}), 400
+
+@app.route('/api/produto', methods=['POST'])
+def api_produto():
+    try:
+        d = request.get_json()
+        conn = get_conn()
+        conn.execute("""INSERT INTO produtos (nome, url, loja, preco_alvo, desconto_minimo)
+            VALUES (?,?,?,?,?)""", (d['nome'], d['url'], d['loja'], d.get('preco_alvo'), d.get('desconto_minimo',15)))
+        conn.commit(); conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'erro': str(e)}), 400

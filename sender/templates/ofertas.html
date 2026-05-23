@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Ofertas — Nora Shop{% endblock %}
+{% block page_title %}Ofertas coletadas{% endblock %}
+{% block page_sub %}Histórico de ofertas encontradas pelos scrapers{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Loja</th><th>Produto</th><th>Preço</th><th>Desconto</th><th>Coletado em</th></tr></thead>
+      <tbody>
+        {% for o in ofertas %}
+        <tr>
+          <td><span class="chip">{{ o.loja }}</span></td>
+          <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            <a href="{{ o.url_afiliado or o.url }}" target="_blank" style="color:var(--purple-l)">{{ o.titulo }}</a>
+          </td>
+          <td style="color:var(--green-l);font-weight:600">R$ {{ '%.2f'|format(o.preco_atual) }}</td>
+          <td>{% if o.desconto_pct %}<span class="badge badge-amber">{{ o.desconto_pct }}% OFF</span>{% else %}—{% endif %}</td>
+          <td style="color:var(--text3);white-space:nowrap">{{ o.coletado_em[:16] if o.coletado_em else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;color:var(--text3);padding:32px">
+          Nenhuma oferta coletada ainda. Rode o bot para começar.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Produtos Fixos — Nora Shop{% endblock %}
+{% block page_title %}Produtos Fixos{% endblock %}
+{% block page_sub %}URLs monitoradas individualmente{% endblock %}
+{% block header_actions %}
+<button class="btn btn-primary btn-sm" onclick="toggleForm()">+ Novo Produto</button>
+{% endblock %}
+{% block content %}
+<div id="form-prod" class="card" style="margin-bottom:14px;display:none">
+  <div class="card-title">📦 Novo produto fixo</div>
+  <div class="grid-2">
+    <div>
+      <div class="form-group"><label>Nome do produto</label><input id="p-nome" placeholder="Ex: iPhone 15 Pro"></div>
+      <div class="form-group"><label>URL do produto</label><input id="p-url" placeholder="https://..."></div>
+    </div>
+    <div>
+      <div class="form-group"><label>Loja</label>
+        <select id="p-loja">
+          {% for l in lojas %}<option value="{{ l.id }}">{{ l.icon }} {{ l.nome }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group"><label>Preço alvo (R$)</label><input id="p-alvo" type="number" placeholder="Opcional"></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-primary" onclick="salvarProd()">Salvar</button>
+    <button class="btn btn-ghost" onclick="toggleForm()">Cancelar</button>
+  </div>
+</div>
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Loja</th><th>Produto</th><th>Preço alvo</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for p in produtos %}
+        <tr>
+          <td><span class="chip">{{ p.loja }}</span></td>
+          <td><a href="{{ p.url }}" target="_blank" style="color:var(--purple-l)">{{ p.nome }}</a></td>
+          <td>{% if p.preco_alvo %}R$ {{ '%.2f'|format(p.preco_alvo) }}{% else %}—{% endif %}</td>
+          <td><span class="badge {% if p.ativo %}badge-green{% else %}badge-gray{% endif %}">{% if p.ativo %}Ativo{% else %}Pausado{% endif %}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align:center;color:var(--text3);padding:32px">Nenhum produto fixo cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function toggleForm() {
+  const f = document.getElementById('form-prod');
+  f.style.display = f.style.display==='none'?'block':'none';
+}
+async function salvarProd() {
+  const r = await api('/api/produto', {
+    nome:  document.getElementById('p-nome').value,
+    url:   document.getElementById('p-url').value,
+    loja:  document.getElementById('p-loja').value,
+    preco_alvo: parseFloat(document.getElementById('p-alvo').value)||null,
+  });
+  r?.ok ? (toast('Produto salvo!'), location.reload()) : toast(r?.erro||'Erro', false);
+}
+</script>
+{% endblock %}
