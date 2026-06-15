@@ -44,12 +44,9 @@ def enviar_telegram(ofertas):
 
 def enviar_whatsapp(ofertas):
     try:
-        from sender.whatsapp_sender import enviar_oferta, esta_online
-        if not esta_online():
-            print("[WA] WhatsApp offline")
-            return
+        from sender.wa_sender import enviar_oferta
     except ImportError:
-        print("[WA] whatsapp_sender.py nao encontrado")
+        print("[WA] wa_sender.py nao encontrado")
         return
     enviadas = 0
     for oferta in ofertas:

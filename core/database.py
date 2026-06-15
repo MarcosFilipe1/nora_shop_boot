@@ -77,14 +77,13 @@ def preco_minimo_historico(url, dias=30):
     conn.close()
     return row[0] if row and row[0] else None
 
-def ja_enviada_recentemente(url, horas=12):
+def ja_enviada_recentemente(url, horas=12, canal=None):
     conn = get_conn()
     c = conn.cursor()
-    c.execute('''
-        SELECT COUNT(*) FROM ofertas_enviadas oe
-        JOIN historico_precos hp ON hp.id = oe.historico_id
-        WHERE hp.url = ? AND oe.enviado_em >= datetime('now', ? || ' hours')
-    ''', (url, f'-{horas}'))
+    if canal:
+        c.execute("SELECT COUNT(*) FROM ofertas_enviadas oe JOIN historico_precos hp ON hp.id = oe.historico_id WHERE hp.url = ? AND oe.canal = ? AND oe.enviado_em >= datetime('now', ? || ' hours')", (url, canal, f"-{horas}"))
+    else:
+        c.execute("SELECT COUNT(*) FROM ofertas_enviadas oe JOIN historico_precos hp ON hp.id = oe.historico_id WHERE hp.url = ? AND oe.enviado_em >= datetime('now', ? || ' hours')", (url, f"-{horas}"))
     count = c.fetchone()[0]
     conn.close()
     return count > 0
