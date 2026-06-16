@@ -2,7 +2,7 @@ import re
 
 ML_ID          = ''
 AMAZON_TAG     = 'norashop0d-20'
-SHOPEE_ID      = ''
+SHOPEE_ID      = '18357991071'
 ALIEXPRESS_ID  = ''
 MAGALU_ID      = ''
 
