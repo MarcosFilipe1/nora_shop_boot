@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Template de Mensagem — Nora Shop{% endblock %}
+{% block page_title %}Template de Mensagem{% endblock %}
+{% block page_sub %}Personalize o formato das ofertas enviadas no WhatsApp e Telegram{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+
+  <!-- EDITOR -->
+  <div class="card">
+    <div class="card-title">✏️ Editor de template</div>
+    <div class="form-group">
+      <label>Variáveis disponíveis (clique para inserir)</label>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">
+        <span class="var-tag" onclick="inserir('{loja}')">{loja}</span>
+        <span class="var-tag" onclick="inserir('{titulo}')">{titulo}</span>
+        <span class="var-tag" onclick="inserir('{preco}')">{preco}</span>
+        <span class="var-tag" onclick="inserir('{preco_original}')">{preco_original}</span>
+        <span class="var-tag" onclick="inserir('{desconto}')">{desconto}</span>
+        <span class="var-tag" onclick="inserir('{cupom}')">{cupom}</span>
+        <span class="var-tag" onclick="inserir('{link}')">{link}</span>
+        <span class="var-tag" onclick="inserir('{icon_loja}')">{icon_loja}</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Template da mensagem</label>
+      <textarea id="template" rows="14" style="font-family:'Courier New',monospace;font-size:13px;height:280px">{{ template }}</textarea>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="salvarTemplate()">💾 Salvar Template</button>
+      <button class="btn btn-ghost" onclick="resetTemplate()">↩️ Restaurar padrão</button>
+      <button class="btn btn-ghost" onclick="previewTemplate()">👁️ Prévia</button>
+    </div>
+  </div>
+
+  <!-- PRÉVIA -->
+  <div class="card">
+    <div class="card-title">👁️ Prévia da mensagem</div>
+    <div style="margin-bottom:12px">
+      <span class="badge badge-amber">WhatsApp</span>
+      <span class="badge badge-blue" style="margin-left:4px">Telegram</span>
+    </div>
+    <div class="template-preview" id="preview">
+      Clique em "Prévia" para ver como ficará a mensagem
+    </div>
+
+    <div style="margin-top:16px">
+      <div class="card-title">📊 Dados de exemplo</div>
+      <div style="font-size:12px;color:var(--text3);display:flex;flex-direction:column;gap:4px">
+        <div><span style="color:var(--yellow)">{icon_loja}</span> → 🟡</div>
+        <div><span style="color:var(--yellow)">{loja}</span> → MERCADOLIVRE</div>
+        <div><span style="color:var(--yellow)">{titulo}</span> → Fone Bluetooth JBL Tune 510BT</div>
+        <div><span style="color:var(--yellow)">{preco}</span> → R$ 149.90</div>
+        <div><span style="color:var(--yellow)">{preco_original}</span> → R$ 299.90</div>
+        <div><span style="color:var(--yellow)">{desconto}</span> → 50%</div>
+        <div><span style="color:var(--yellow)">{cupom}</span> → FONE20</div>
+        <div><span style="color:var(--yellow)">{link}</span> → https://meli.la/xxx</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function inserir(tag) {
+  const ta = document.getElementById('template');
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const text = ta.value;
+  ta.value = text.substring(0, start) + tag + text.substring(end);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = start + tag.length;
+}
+
+async function salvarTemplate() {
+  const template = document.getElementById('template').value;
+  const r = await api('/api/template/salvar', { template });
+  r?.ok ? toast('Template salvo!') : toast(r?.erro || 'Erro', false);
+}
+
+async function resetTemplate() {
+  if (!confirm('Restaurar template padrão?')) return;
+  const r = await api('/api/template/reset');
+  if (r?.ok) {
+    document.getElementById('template').value = r.template;
+    toast('Template restaurado');
+    previewTemplate();
+  }
+}
+
+function previewTemplate() {
+  const template = document.getElementById('template').value;
+  const dados = {
+    '{icon_loja}': '🟡',
+    '{loja}': 'MERCADOLIVRE',
+    '{titulo}': 'Fone Bluetooth JBL Tune 510BT',
+    '{preco}': 'R$ 149.90',
+    '{preco_original}': 'R$ 299.90',
+    '{desconto}': '50%',
+    '{cupom}': '🎟️ Cupom: FONE20',
+    '{link}': 'https://meli.la/xxx',
+  };
+  let preview = template;
+  for (const [k, v] of Object.entries(dados)) {
+    preview = preview.replaceAll(k, v);
+  }
+  document.getElementById('preview').textContent = preview;
+}
+
+// Preview inicial
+previewTemplate();
+</script>
+{% endblock %}

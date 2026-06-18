@@ -1,10 +1,10 @@
 import re
 
-ML_ID          = ''
-AMAZON_TAG     = 'norashop0d-20'
+ML_ID          = '71631488'
+AMAZON_TAG     = 'norashop06-20'
 SHOPEE_ID      = '18357991071'
 ALIEXPRESS_ID  = ''
-MAGALU_ID      = ''
+MAGALU_ID      = 'norashop'
 
 def gerar_link_mercadolivre(url):
     if not ML_ID: return url

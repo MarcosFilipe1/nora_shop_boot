@@ -11,6 +11,23 @@ const STATUS_F = path.join(ROOT, 'data', 'wa_status.json');
 const GROUPS_F = path.join(ROOT, 'data', 'wa_groups.json');
 const LOG_F    = path.join(ROOT, 'logs', 'bot.log');
 
+// ── CONFIGURAÇÃO DE HORÁRIOS ──
+const CONFIG = {
+    horarioInicio: 8,
+    horarioFim: 22,
+    intervaloMinutos: 10,
+    limites: {
+        manha:  { inicio: 8,  fim: 12, max: 10 },
+        tarde:  { inicio: 12, fim: 18, max: 5 },
+        noite:  { inicio: 18, fim: 22, max: 15 },
+    }
+};
+
+// Contadores de envio por período
+let enviosPorPeriodo = { manha: 0, tarde: 0, noite: 0 };
+let ultimoReset = new Date().toDateString();
+let ultimoEnvio = {};
+
 function ensureDirs() {
     [path.join(ROOT,'data'), path.join(ROOT,'logs'), AUTH_DIR].forEach(d => {
         if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
@@ -29,7 +46,69 @@ function log(nivel, msg) {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-function randDelay(min=8, max=20) { return sleep((min + Math.random()*(max-min))*1000); }
+
+function getHoraBrasilia() {
+    const now = new Date();
+    const br = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    return br.getHours();
+}
+
+function getPeriodoAtual() {
+    const hora = getHoraBrasilia();
+    if (hora >= CONFIG.limites.manha.inicio && hora < CONFIG.limites.manha.fim) return 'manha';
+    if (hora >= CONFIG.limites.tarde.inicio && hora < CONFIG.limites.tarde.fim) return 'tarde';
+    if (hora >= CONFIG.limites.noite.inicio && hora < CONFIG.limites.noite.fim) return 'noite';
+    return null;
+}
+
+function dentroDoHorario() {
+    const hora = getHoraBrasilia();
+    return hora >= CONFIG.horarioInicio && hora < CONFIG.horarioFim;
+}
+
+function resetarContadores() {
+    const hoje = new Date().toDateString();
+    if (hoje !== ultimoReset) {
+        enviosPorPeriodo = { manha: 0, tarde: 0, noite: 0 };
+        ultimoReset = hoje;
+        log('INFO', 'Contadores de envio resetados para novo dia');
+    }
+}
+
+function podeSendar(grupoId) {
+    resetarContadores();
+
+    if (!dentroDoHorario()) {
+        log('INFO', `Fora do horario (${getHoraBrasilia()}h) — aguardando 8h-22h`);
+        return false;
+    }
+
+    const periodo = getPeriodoAtual();
+    if (!periodo) return false;
+
+    const limite = CONFIG.limites[periodo].max;
+    if (enviosPorPeriodo[periodo] >= limite) {
+        log('INFO', `Limite ${periodo} atingido: ${enviosPorPeriodo[periodo]}/${limite}`);
+        return false;
+    }
+
+    const agora = Date.now();
+    const ultimo = ultimoEnvio[grupoId] || 0;
+    const diff = (agora - ultimo) / 1000 / 60;
+    if (diff < CONFIG.intervaloMinutos) {
+        log('INFO', `Aguardando intervalo grupo ${grupoId}: ${CONFIG.intervaloMinutos - Math.floor(diff)}min restantes`);
+        return false;
+    }
+
+    return true;
+}
+
+function registrarEnvio(grupoId) {
+    const periodo = getPeriodoAtual();
+    if (periodo) enviosPorPeriodo[periodo]++;
+    ultimoEnvio[grupoId] = Date.now();
+    log('INFO', `Envios ${periodo}: ${enviosPorPeriodo[periodo]}/${CONFIG.limites[periodo]?.max || '?'}`);
+}
 
 ensureDirs();
 writeStatus({ online: false, numero: null });
@@ -61,11 +140,7 @@ async function startBot() {
             const numero = sock.user.id.split(':')[0];
             log('SUCCESS', `WhatsApp conectado — ${numero}`);
             writeStatus({ online: true, numero });
-
-            // Lista grupos
             await listarGrupos(sock);
-
-            // Inicia fila
             processarFila(sock);
         }
 
@@ -75,8 +150,8 @@ async function startBot() {
             writeStatus({ online: false, numero: null });
 
             if (reason !== DisconnectReason.loggedOut) {
-                log('INFO', 'Reconectando em 5s...');
-                await sleep(5000);
+                log('INFO', 'Reconectando em 10s...');
+                await sleep(10000);
                 startBot();
             } else {
                 log('ERROR', 'Logout detectado. Remova a pasta auth/ e reconecte.');
@@ -132,6 +207,8 @@ async function enviarImagem(sock, destino, imagemUrl, legenda) {
 
 async function processarFila(sock) {
     log('INFO', 'Monitorando fila de envios...');
+    log('INFO', `Horario: ${CONFIG.horarioInicio}h-${CONFIG.horarioFim}h | Intervalo: ${CONFIG.intervaloMinutos}min`);
+    log('INFO', `Limites — Manha: ${CONFIG.limites.manha.max} | Tarde: ${CONFIG.limites.tarde.max} | Noite: ${CONFIG.limites.noite.max}`);
 
     setInterval(async () => {
         if (!fs.existsSync(QUEUE_F)) return;
@@ -139,32 +216,49 @@ async function processarFila(sock) {
         try { fila = JSON.parse(fs.readFileSync(QUEUE_F, 'utf8')); } catch { return; }
         if (!fila.length) return;
 
-        const item = fila.shift();
+        const item = fila[0];
+        const destinos = item.grupos || [];
+
+        // Verifica se pode enviar para pelo menos um grupo
+        let enviouAlgum = false;
+        const gruposRestantes = [];
+
+        for (const gid of destinos) {
+            if (!podeSendar(gid)) {
+                gruposRestantes.push(gid);
+                continue;
+            }
+
+            let ok = false;
+            if (item.imagem) {
+                ok = await enviarImagem(sock, gid, item.imagem, item.texto);
+                if (!ok) ok = await enviarTexto(sock, gid, item.texto);
+            } else {
+                ok = await enviarTexto(sock, gid, item.texto);
+            }
+
+            if (ok) {
+                registrarEnvio(gid);
+                enviouAlgum = true;
+            } else {
+                gruposRestantes.push(gid);
+            }
+
+            await sleep(3000);
+        }
+
+        if (gruposRestantes.length === 0) {
+            // Todos os grupos receberam — remove da fila
+            fila.shift();
+        } else {
+            // Atualiza com grupos que faltam
+            fila[0].grupos = gruposRestantes;
+        }
+
         fs.writeFileSync(QUEUE_F, JSON.stringify(fila, null, 2));
 
-        log('INFO', `Processando: ${item.id}`);
-
-        const destinos = item.grupos || [];
-        for (const gid of destinos) {
-            if (item.imagem) {
-                const ok = await enviarImagem(sock, gid, item.imagem, item.texto);
-                if (!ok) await enviarTexto(sock, gid, item.texto);
-            } else {
-                await enviarTexto(sock, gid, item.texto);
-            }
-            await randDelay(8, 20);
-        }
-    }, 10000);
+    }, 30000); // Verifica a fila a cada 30 segundos
 }
-
-// Comando via stdin
-process.stdin.setEncoding('utf8');
-process.stdin.on('data', async (data) => {
-    const cmd = data.trim();
-    if (cmd === 'grupos') {
-        log('INFO', 'Atualizando lista de grupos...');
-    }
-});
 
 log('INFO', 'Iniciando Baileys...');
 startBot();

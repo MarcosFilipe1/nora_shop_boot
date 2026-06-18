@@ -545,3 +545,49 @@ def api_produto():
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'ok': False, 'erro': str(e)}), 400
+
+TEMPLATE_PADRAO = """🔥 *OFERTA {loja}*
+
+📦 {titulo}
+
+{preco_original}💰 *Por: {preco}*
+🏷️ {desconto} OFF
+{cupom}
+
+👉 {link}
+
+_⚡ Oferta por tempo limitado!_"""
+
+def _template_path():
+    return os.path.join(os.path.dirname(__file__), '..', 'data', 'template.txt')
+
+def _carregar_template():
+    try:
+        with open(_template_path()) as f:
+            return f.read()
+    except:
+        return TEMPLATE_PADRAO
+
+@app.route('/template')
+def template_editor():
+    _ensure_tables()
+    return render_template('template_editor.html', status=get_status(), template=_carregar_template())
+
+@app.route('/api/template/salvar', methods=['POST'])
+def api_template_salvar():
+    try:
+        d = request.get_json()
+        with open(_template_path(), 'w') as f:
+            f.write(d['template'])
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'erro': str(e)}), 400
+
+@app.route('/api/template/reset', methods=['POST'])
+def api_template_reset():
+    try:
+        with open(_template_path(), 'w') as f:
+            f.write(TEMPLATE_PADRAO)
+        return jsonify({'ok': True, 'template': TEMPLATE_PADRAO})
+    except Exception as e:
+        return jsonify({'ok': False, 'erro': str(e)}), 400
