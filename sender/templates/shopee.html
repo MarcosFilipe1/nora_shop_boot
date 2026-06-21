@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Produtos Shopee — Nora Shop{% endblock %}
+{% block page_title %}Produtos Shopee{% endblock %}
+{% block page_sub %}Importação de CSV de produtos afiliados{% endblock %}
+
+{% block content %}
+<div class="metrics">
+  <div class="metric-card c-amber">
+    <div class="metric-label">Total importado</div>
+    <div class="metric-value">{{ total }}</div>
+    <div class="metric-icon">🛍️</div>
+  </div>
+  <div class="metric-card c-green">
+    <div class="metric-label">Já enviados</div>
+    <div class="metric-value">{{ enviados }}</div>
+    <div class="metric-icon">✓</div>
+  </div>
+  <div class="metric-card c-purple">
+    <div class="metric-label">Pendentes</div>
+    <div class="metric-value">{{ total - enviados }}</div>
+    <div class="metric-icon">⏳</div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:20px">
+  <div class="card-title">📥 Importar CSV da Shopee</div>
+  <form id="form-import" enctype="multipart/form-data">
+    <div class="form-group">
+      <label>Categoria do CSV</label>
+      <select id="categoria" name="categoria" required>
+        <option value="">-- Selecione a categoria --</option>
+        <option value="Roupas Femininas">Roupas Femininas</option>
+        <option value="Casa e Construção">Casa e Construção</option>
+        <option value="Celulares e Dispositivos">Celulares e Dispositivos</option>
+        <option value="Bolsas Femininas">Bolsas Femininas</option>
+        <option value="Eletrodomésticos">Eletrodomésticos</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Arquivo CSV</label>
+      <input type="file" id="arquivo" name="arquivo" accept=".csv" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Importar produtos</button>
+  </form>
+  <div style="font-size:12px;color:var(--text3);margin-top:10px">
+    Baixe o CSV no painel de afiliados da Shopee em "Batch Tools" → "Product Links"
+  </div>
+</div>
+
+<div class="card" style="margin-top:20px">
+  <div class="card-title">📦 Produtos importados (últimos 200)</div>
+  <div class="table-wrap">
+  <table>
+    <thead><tr>
+      <th>Título</th><th>Preço</th><th>Vendas</th><th>Comissão</th><th>Status</th>
+    </tr></thead>
+    <tbody>
+      {% for p in produtos %}
+      <tr>
+        <td>{{ p[1][:60] }}</td>
+        <td>R$ {{ '%.2f' % p[2] }}</td>
+        <td>{{ p[3] }}</td>
+        <td>{{ p[4] }}</td>
+        <td>{% if p[6] %}<span class="badge badge-green">enviado</span>{% else %}<span class="badge badge-gray">pendente</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('form-import').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData();
+  fd.append('arquivo', document.getElementById('arquivo').files[0]);
+  fd.append('categoria', document.getElementById('categoria').value);
+  const r = await fetch('/api/shopee/importar', {method:'POST', body:fd});
+  const d = await r.json();
+  if (d.ok) {
+    toast(`Importado! ${d.novos} novos, ${d.atualizados} atualizados`);
+    setTimeout(() => location.reload(), 1500);
+  } else {
+    toast(d.erro || 'Erro', false);
+  }
+});
+</script>
+{% endblock %}

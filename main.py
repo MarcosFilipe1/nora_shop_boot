@@ -17,9 +17,9 @@ async def coletar_todas():
     print(f"[BOT] Keywords ativas: {len(keywords)} | Produtos monitorados: {len(produtos)}")
     todas = []
     todas += await mercadolivre.executar(keywords=keywords, produtos=produtos)
-    todas += await magazineluiza.executar(keywords=keywords, produtos=produtos)
-    todas += await amazon.executar(keywords=keywords, produtos=produtos)
-    todas += await shopee.executar(keywords=keywords, produtos=produtos)
+    # todas += await magazineluiza.executar(keywords=keywords, produtos=produtos)  # bloqueado por IP
+    # todas += await amazon.executar(keywords=keywords, produtos=produtos)  # bloqueado por IP
+    # todas += await shopee.executar(keywords=keywords, produtos=produtos)  # bloqueado por IP
     print(f"[BOT] Total coletado: {len(todas)} ofertas")
     return todas
 

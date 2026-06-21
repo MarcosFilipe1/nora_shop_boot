@@ -7,6 +7,15 @@ ALIEXPRESS_ID  = ''
 MAGALU_ID      = 'norashop'
 
 def gerar_link_mercadolivre(url):
+    # Tenta API oficial do linkbuilder (gera meli.la com tag norashop)
+    try:
+        from core.ml_api import gerar_link_afiliado_ml
+        r = gerar_link_afiliado_ml(url)
+        if r and r.get('short_url'):
+            return r['short_url']
+    except Exception as e:
+        print(f'[ML] API falhou, usando fallback: {e}')
+    # Fallback: parametros manuais
     if not ML_ID: return url
     sep = '&' if '?' in url else '?'
     return f"{url}{sep}matt_tool=affiliates&matt_word={ML_ID}"

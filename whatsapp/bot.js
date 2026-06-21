@@ -14,12 +14,12 @@ const LOG_F    = path.join(ROOT, 'logs', 'bot.log');
 // ── CONFIGURAÇÃO DE HORÁRIOS ──
 const CONFIG = {
     horarioInicio: 8,
-    horarioFim: 22,
+    horarioFim: 2,
     intervaloMinutos: 10,
     limites: {
         manha:  { inicio: 8,  fim: 12, max: 10 },
         tarde:  { inicio: 12, fim: 18, max: 5 },
-        noite:  { inicio: 18, fim: 22, max: 15 },
+        noite:  { inicio: 18, fim: 2, max: 15 },
     }
 };
 
@@ -55,15 +55,24 @@ function getHoraBrasilia() {
 
 function getPeriodoAtual() {
     const hora = getHoraBrasilia();
-    if (hora >= CONFIG.limites.manha.inicio && hora < CONFIG.limites.manha.fim) return 'manha';
-    if (hora >= CONFIG.limites.tarde.inicio && hora < CONFIG.limites.tarde.fim) return 'tarde';
-    if (hora >= CONFIG.limites.noite.inicio && hora < CONFIG.limites.noite.fim) return 'noite';
+    function dentro(p) {
+        if (p.fim > p.inicio) return hora >= p.inicio && hora < p.fim;
+        return hora >= p.inicio || hora < p.fim;
+    }
+    if (dentro(CONFIG.limites.manha)) return 'manha';
+    if (dentro(CONFIG.limites.tarde)) return 'tarde';
+    if (dentro(CONFIG.limites.noite)) return 'noite';
     return null;
 }
 
 function dentroDoHorario() {
     const hora = getHoraBrasilia();
-    return hora >= CONFIG.horarioInicio && hora < CONFIG.horarioFim;
+    // Suporta horarios que cruzam meia-noite (ex: 8h-2h)
+    if (CONFIG.horarioFim > CONFIG.horarioInicio) {
+        return hora >= CONFIG.horarioInicio && hora < CONFIG.horarioFim;
+    } else {
+        return hora >= CONFIG.horarioInicio || hora < CONFIG.horarioFim;
+    }
 }
 
 function resetarContadores() {
@@ -244,7 +253,7 @@ async function processarFila(sock) {
                 gruposRestantes.push(gid);
             }
 
-            await sleep(3000);
+            await sleep(8000);
         }
 
         if (gruposRestantes.length === 0) {

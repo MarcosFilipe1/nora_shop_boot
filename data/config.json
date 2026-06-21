@@ -1,0 +1,16 @@
+{
+  "intervalo_scraping": 30,
+  "max_envios_hora": 10,
+  "desconto_minimo": 15,
+  "cooldown_horas": 12,
+  "ig_token": "",
+  "ig_user_id": "",
+  "ig_auto": 0,
+  "afiliados": {
+    "mercadolivre": "",
+    "amazon": "norashop0d-20",
+    "shopee": "18357991071",
+    "aliexpress": "",
+    "magazineluiza": ""
+  }
+}

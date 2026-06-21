@@ -1,12 +1,32 @@
-__pycache__/
-*.pyc
-*.pyo
-.env
-data/ofertas.db
-data/config.json
+# Cookies e credenciais
+data/ml_cookies.txt
+data/amazon_cookies.txt
+data/shopee_cookies.txt
+data/wa_queue.json
 data/wa_status.json
 data/wa_groups.json
+
+# WhatsApp auth (sensível!)
+whatsapp/auth/
+whatsapp/node_modules/
+
+# Dados gerados
+data/ml_produtos_hub.json
+data/ml_produtos_enriquecidos.json
+data/ml_produtos_com_links.json
+
+# Logs
 logs/
-node_modules/
-.wwebjs_auth/
-.wwebjs_cache/
+*.log
+
+# Banco
+data/ofertas.db
+data/ofertas.db-journal
+
+# Python
+__pycache__/
+*.pyc
+.pyc
+
+# Outros
+.env

@@ -591,3 +591,56 @@ def api_template_reset():
         return jsonify({'ok': True, 'template': TEMPLATE_PADRAO})
     except Exception as e:
         return jsonify({'ok': False, 'erro': str(e)}), 400
+
+import csv
+from io import StringIO
+
+@app.route('/shopee')
+def shopee_page():
+    conn = get_conn()
+    rows = conn.execute('SELECT id, titulo, preco, vendas, comissao_pct, offer_link, enviado, criado_em FROM shopee_produtos ORDER BY criado_em DESC LIMIT 200').fetchall()
+    total = conn.execute('SELECT COUNT(*) FROM shopee_produtos').fetchone()[0]
+    enviados = conn.execute('SELECT COUNT(*) FROM shopee_produtos WHERE enviado=1').fetchone()[0]
+    conn.close()
+    return render_template('shopee.html', produtos=rows, total=total, enviados=enviados, status=get_status())
+
+@app.route('/api/shopee/importar', methods=['POST'])
+def api_shopee_importar():
+    try:
+        f = request.files.get('arquivo')
+        categoria = request.form.get('categoria', 'Outros')
+        if not f:
+            return jsonify({'ok': False, 'erro': 'Sem arquivo'}), 400
+        
+        content = f.read().decode('utf-8-sig')
+        reader = csv.DictReader(StringIO(content))
+        
+        conn = get_conn()
+        novos = 0
+        atualizados = 0
+        for row in reader:
+            preco_str = row.get('Price', '0').replace(',', '.')
+            try: preco = float(preco_str)
+            except: preco = 0
+            
+            existe = conn.execute('SELECT id FROM shopee_produtos WHERE item_id=?', (row['Item Id'],)).fetchone()
+            if existe:
+                conn.execute('''UPDATE shopee_produtos SET 
+                    titulo=?, preco=?, vendas=?, loja_nome=?, comissao_pct=?, comissao_valor=?, 
+                    product_link=?, offer_link=?, categoria=? WHERE item_id=?''',
+                    (row['Item Name'], preco, row['Sales'], row['Nome da loja'], 
+                     row['Commission Rate'], row['Commission'], row['Product Link'],
+                     row['Offer Link'], categoria, row['Item Id']))
+                atualizados += 1
+            else:
+                conn.execute('''INSERT INTO shopee_produtos 
+                    (item_id, titulo, preco, vendas, loja_nome, comissao_pct, comissao_valor, product_link, offer_link, categoria)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)''',
+                    (row['Item Id'], row['Item Name'], preco, row['Sales'], row['Nome da loja'],
+                     row['Commission Rate'], row['Commission'], row['Product Link'], row['Offer Link'], categoria))
+                novos += 1
+        conn.commit()
+        conn.close()
+        return jsonify({'ok': True, 'novos': novos, 'atualizados': atualizados})
+    except Exception as e:
+        return jsonify({'ok': False, 'erro': str(e)}), 500

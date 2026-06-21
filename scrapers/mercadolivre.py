@@ -49,14 +49,11 @@ async def buscar_por_keyword(keyword, keyword_id=None, desconto_minimo=15, preco
                         desconto_pct = int(match.group(1)) if match else None
                     if not desconto_pct and preco_original and preco_original > preco_atual:
                         desconto_pct = int((1 - preco_atual / preco_original) * 100)
-                    # Filtra por relevancia - titulo deve conter pelo menos uma palavra da keyword
-                    palavras = keyword.lower().split()
+                    # Filtra por relevancia: titulo deve conter palavras-chave (ignora stopwords)
+                    stopwords = {'de','do','da','com','para','sem','em','a','o','e','ou','no','na','um','uma'}
+                    palavras = [p for p in keyword.lower().split() if p not in stopwords and len(p) > 2]
                     titulo_lower = titulo.lower()
-                    if not any(p in titulo_lower for p in palavras): continue
-                    # Filtra por relevancia - titulo deve conter pelo menos uma palavra da keyword
-                    palavras = keyword.lower().split()
-                    titulo_lower = titulo.lower()
-                    if not any(p in titulo_lower for p in palavras): continue
+                    if palavras and not all(p in titulo_lower for p in palavras): continue
                     if desconto_pct and desconto_pct < desconto_minimo: continue
                     if preco_maximo and preco_atual > preco_maximo: continue
                     img_el = await item.query_selector("img")
